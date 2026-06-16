@@ -20,8 +20,6 @@ This vignette uses the `swiss` dataset (included in base R) for three comparison
 
 ```{r}
 library(shapley)
-library(relaimpo)
-
 data(swiss)
 
 x_vars <- c("Agriculture", "Examination", "Education", "Catholic", "Infant.Mortality")
@@ -41,15 +39,19 @@ print(result_lm)
 ```
 
 ```{r}
-lm_fit       <- lm(Fertility ~ Agriculture + Examination + Education + Catholic + Infant.Mortality,
-                   data = swiss)
-result_relimp <- calc.relimp(lm_fit, type = "lmg")
-print(result_relimp@lmg)
+if (requireNamespace("relaimpo", quietly = TRUE)) {
+  lm_fit        <- lm(Fertility ~ Agriculture + Examination + Education + Catholic + Infant.Mortality,
+                      data = swiss)
+  result_relimp <- relaimpo::calc.relimp(lm_fit, type = "lmg")
+  print(result_relimp@lmg)
+}
 ```
 
 ```{r}
-# Confirm equivalence (should be < 1e-10)
-max(abs(result_lm$values - result_relimp@lmg[x_vars]))
+if (requireNamespace("relaimpo", quietly = TRUE)) {
+  # Confirm equivalence (should be < 1e-10)
+  print(max(abs(result_lm$values - result_relimp@lmg[x_vars])))
+}
 ```
 
 `Education` and `Catholic` dominate — together they account for roughly two-thirds of total R².
