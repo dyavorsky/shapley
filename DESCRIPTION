@@ -1,0 +1,28 @@
+Package: shapley
+Type: Package
+Title: Shapley Values for Regression Models
+Version: 0.1.0
+Date: 2026-06-12
+Authors@R: person(
+    "Dan", "Yavorsky",
+    role = c("aut", "cre", "cph"),
+    email = "dyavorsky@gmail.com"
+    )
+Description: Computes Shapley/LMG variable importance values by averaging each
+    predictor's marginal R-squared contribution over all possible orderings.
+    Supports continuous outcomes (linear regression, R-squared), binary outcomes
+    (logistic regression, McFadden pseudo-R-squared), and ordinal outcomes
+    (proportional odds regression, McFadden pseudo-R-squared). Control variables
+    can be specified and are held fixed across all subset models, so Shapley
+    values attribute only the incremental fit above the controls.
+License: MIT
+Encoding: UTF-8
+Depends: R (>= 4.1)
+Imports:
+    MASS,
+    stats
+Suggests:
+    relaimpo,
+    knitr,
+    quarto
+VignetteBuilder: knitr, quarto

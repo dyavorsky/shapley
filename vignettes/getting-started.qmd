@@ -1,0 +1,111 @@
+---
+title: "Getting Started with shapley"
+vignette: >
+  %\VignetteIndexEntry{Getting Started with shapley}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Overview
+
+The `shapley` package computes Shapley/LMG variable importance for regression models. It extends the approach in the CRAN package `relaimpo` — which is limited to linear regression — to handle binary outcomes (logistic regression) and ordinal outcomes (proportional odds regression).
+
+This vignette uses the `swiss` dataset (included in base R) for three comparisons:
+
+1. **Validation**: `shapley` (linear) vs `relaimpo::calc.relimp()` — results should be identical.
+2. **Binary outcomes**: Shapley values from logistic regression vs a linear probability model.
+3. **Ordinal outcomes**: Shapley values from proportional odds regression vs linear regression treating the ordinal variable as continuous.
+
+## Setup
+
+```{r}
+library(shapley)
+library(relaimpo)
+
+data(swiss)
+
+x_vars <- c("Agriculture", "Examination", "Education", "Catholic", "Infant.Mortality")
+```
+
+`swiss` contains 47 French-speaking Swiss provinces (c. 1888) with a continuous `Fertility` measure and five socioeconomic predictors. It is the canonical dataset in `relaimpo`'s own documentation.
+
+---
+
+## 1. Linear Regression: shapley vs relaimpo
+
+Both packages implement the LMG method — averaging each predictor's marginal R² contribution over all possible orderings. The results should be numerically identical.
+
+```{r}
+result_lm <- shapley("Fertility", x_vars, data = swiss, y_type = "continuous")
+print(result_lm)
+```
+
+```{r}
+lm_fit       <- lm(Fertility ~ Agriculture + Examination + Education + Catholic + Infant.Mortality,
+                   data = swiss)
+result_relimp <- calc.relimp(lm_fit, type = "lmg")
+print(result_relimp@lmg)
+```
+
+```{r}
+# Confirm equivalence (should be < 1e-10)
+max(abs(result_lm$values - result_relimp@lmg[x_vars]))
+```
+
+`Education` and `Catholic` dominate — together they account for roughly two-thirds of total R².
+
+---
+
+## 2. Binary Outcome: Logit vs Linear Probability Model
+
+We binarize `Fertility` at its median to create a binary outcome, then compare Shapley values under two modeling choices: logistic regression (appropriate for binary outcomes) and a linear probability model (LPM, which treats the 0/1 variable as continuous).
+
+```{r}
+swiss$high_fert <- as.integer(swiss$Fertility > median(swiss$Fertility))
+
+result_logit <- shapley("high_fert", x_vars, data = swiss, y_type = "binary")
+result_lpm   <- shapley("high_fert", x_vars, data = swiss, y_type = "continuous")
+
+print(result_logit)
+print(result_lpm)
+```
+
+```{r}
+# Compare relative shares (normalize to sum to 1 for cross-model comparison)
+shares <- data.frame(
+  logit = result_logit$values / sum(result_logit$values),
+  lpm   = result_lpm$values   / sum(result_lpm$values)
+)
+round(shares, 3)
+```
+
+The two models use different R² scales (McFadden pseudo-R² for logit, standard R² for LPM), so absolute values are not directly comparable — normalize to shares first. The relative rankings tend to agree, but logistic regression is the correct model for binary outcomes and avoids the LPM's predicted-probability-outside-[0,1] problem.
+
+---
+
+## 3. Ordinal Outcome: Proportional Odds vs Linear
+
+We discretize `Fertility` into three ordered tiers (`low`, `mid`, `high`) and compare Shapley values under proportional odds regression (appropriate for ordinal outcomes) against linear regression treating the integer tier codes (1, 2, 3) as continuous.
+
+```{r}
+swiss$fert_cat <- cut(swiss$Fertility, breaks = 3, labels = c("low", "mid", "high"))
+swiss$fert_cat <- factor(swiss$fert_cat, ordered = TRUE)
+swiss$fert_int <- as.integer(swiss$fert_cat)  # 1 / 2 / 3 for linear comparison
+
+result_polr <- shapley("fert_cat", x_vars, data = swiss, y_type = "ordinal")
+result_cont <- shapley("fert_int", x_vars, data = swiss, y_type = "continuous")
+
+print(result_polr)
+print(result_cont)
+```
+
+```{r}
+# Compare relative shares
+shares_ord <- data.frame(
+  polr   = result_polr$values / sum(result_polr$values),
+  linear = result_cont$values  / sum(result_cont$values)
+)
+round(shares_ord, 3)
+```
+
+As with the binary case, the relative importance rankings are broadly similar between the two approaches. Proportional odds regression is preferable when the outcome is genuinely ordinal: it respects the ordering without imposing equal spacing between levels, and avoids the linear model's assumption that the gap between `low→mid` equals `mid→high`.

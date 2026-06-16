@@ -1,0 +1,4 @@
+export(shapley)
+S3method(print, shapley_result)
+importFrom(MASS, polr)
+importFrom(stats, lm, glm, binomial, complete.cases, as.formula, setNames)
