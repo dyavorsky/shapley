@@ -20,6 +20,13 @@ shapley <- function(y_var, x_vars, z_vars = character(0), data,
   if (n < length(x_vars) + length(z_vars) + 1)
     stop("Insufficient complete cases for Shapley analysis")
 
+  if (y_type == "continuous") {
+    non_numeric <- Filter(function(v) !is.numeric(complete_data[[v]]), c(x_vars, z_vars))
+    if (length(non_numeric) > 0)
+      stop("y_type = 'continuous' requires numeric predictors; convert these first: ",
+           paste(non_numeric, collapse = ", "))
+  }
+
   get_r2_fn  <- .make_r2_fn(y_var, complete_data, y_type)
   model_type <- switch(y_type,
     continuous = "lm",
