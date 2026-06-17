@@ -90,7 +90,10 @@ The two models use different R² scales (McFadden pseudo-R² for logit, standard
 We discretize `Fertility` into three ordered tiers (`low`, `mid`, `high`) and compare Shapley values under proportional odds regression (appropriate for ordinal outcomes) against linear regression treating the integer tier codes (1, 2, 3) as continuous.
 
 ```{r}
-swiss$fert_cat <- cut(swiss$Fertility, breaks = 3, labels = c("low", "mid", "high"))
+swiss$fert_cat <- cut(swiss$Fertility,
+                      breaks = quantile(swiss$Fertility, c(0, 1/3, 2/3, 1)),
+                      include.lowest = TRUE,
+                      labels = c("low", "mid", "high"))
 swiss$fert_cat <- factor(swiss$fert_cat, ordered = TRUE)
 swiss$fert_int <- as.integer(swiss$fert_cat)  # 1 / 2 / 3 for linear comparison
 
